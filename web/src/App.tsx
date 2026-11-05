@@ -1,55 +1,295 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { initApp } from "@freeappstore/sdk";
-import { type NavItem, PageHeader, Shell } from "@freeappstore/sdk/ui";
-
-// "cue-scroll" is replaced by the CLI scaffold or deployment flow with this app's id.
+import {
+	Card,
+	Modal,
+	type NavItem,
+	PageHeader,
+	Shell,
+} from "@freeappstore/sdk/ui";
+import { Editor } from "./Editor";
+import { Reader, type ReadingSession } from "./Reader";
+import { pwa } from "./pwa";
+import { type Script, loadLibrary, saveScript, wordCount } from "./scripts";
 export const fas = initApp({ appId: "cue-scroll" });
-
-// The app's screens. Shell renders them as the navbar: a <nav> in its topbar
-// with the current screen highlighted, collapsing to a menu on phones.
-// Add one entry per primary screen; `title` becomes the browser tab title.
 const NAV: NavItem[] = [
-  { label: "Home", href: "/", title: "cue-scroll" },
-  { label: "About", href: "/about", title: "About — cue-scroll" },
+	{ label: "Scripts", href: "/", title: "Cue Scroll" },
+	{ label: "How to use", href: "/help", title: "How to use — Cue Scroll" },
 ];
-
+const location = () => window.location.pathname + window.location.search;
 export default function App() {
-  const [path, setPath] = useState(() => window.location.pathname);
-
-  // Keep the screen in step with the browser's back and forward buttons.
-  useEffect(() => {
-    const sync = () => setPath(window.location.pathname);
-    window.addEventListener("popstate", sync);
-    return () => window.removeEventListener("popstate", sync);
-  }, []);
-
-  // Nav clicks switch screens without a page load. Shell scrolls to the top
-  // and moves focus to the new screen's PageHeader.
-  const navigate = (href: string) => {
-    window.history.pushState(null, "", href);
-    setPath(window.location.pathname);
-  };
-
-  return (
-    <Shell app={fas} appName={"cue-scroll"} nav={NAV} onNavigate={navigate}>
-      <div className="mx-auto w-full max-w-3xl p-4 sm:p-8">
-        {path === "/about" ? <About /> : <Home />}
-      </div>
-    </Shell>
-  );
-}
-
-function Home() {
-  return <PageHeader title={"Welcome to cue-scroll"} description="Edit web/src/App.tsx to get started." />;
-}
-
-function About() {
-  return (
-    <>
-      <PageHeader title="About" />
-      <p style={{ color: "var(--muted)" }}>
-        cue-scroll is a free app on <a href="https://freeappstore.online">FreeAppStore</a>.
-      </p>
-    </>
-  );
+	const [path, setPath] = useState(location);
+	const [scripts, setScripts] = useState<Script[]>([]);
+	const [loading, setLoading] = useState(true);
+	const [error, setError] = useState("");
+	const [editor, setEditor] = useState<Script | null>(null);
+	const [deleting, setDeleting] = useState<Script | null>(null);
+	const [pendingDelete, setPendingDelete] = useState(false);
+	const [deleteError, setDeleteError] = useState("");
+	const loadGeneration = useRef(0);
+	const readingSessions = useRef<Record<string, ReadingSession>>({});
+	const busy = useRef(false);
+	const playing = useRef(false);
+	const deletion = useRef(false);
+	busy.current = !!editor || !!deleting;
+	const onBusy = useCallback((value: boolean) => {
+		playing.current = value;
+	}, []);
+	const refresh = useCallback(async () => {
+		const generation = ++loadGeneration.current;
+		setLoading(true);
+		setError("");
+		try {
+			const next = await loadLibrary();
+			if (generation === loadGeneration.current) setScripts(next);
+		} catch (error) {
+			if (generation === loadGeneration.current)
+				setError((error as Error).message);
+		} finally {
+			if (generation === loadGeneration.current) setLoading(false);
+		}
+	}, []);
+	useEffect(() => {
+		void refresh();
+		return () => {
+			loadGeneration.current++;
+		};
+	}, [refresh]);
+	useEffect(() => {
+		const sync = () => setPath(location());
+		window.addEventListener("popstate", sync);
+		const removeGuard = pwa.addBusyGuard(() => busy.current || playing.current);
+		return () => {
+			window.removeEventListener("popstate", sync);
+			removeGuard();
+		};
+	}, []);
+	const navigate = (href: string) => {
+		window.history.pushState(null, "", href);
+		setPath(location());
+	};
+	const url = new URL(path, window.location.origin);
+	const reading =
+		url.pathname === "/read"
+			? scripts.find((script) => script.id === url.searchParams.get("id"))
+			: undefined;
+	async function remove() {
+		if (!deleting || deletion.current) return;
+		deletion.current = true;
+		setPendingDelete(true);
+		setDeleteError("");
+		try {
+			setScripts(await saveScript(deleting, true));
+			setDeleting(null);
+		} catch (error) {
+			setDeleteError((error as Error).message);
+		} finally {
+			deletion.current = false;
+			setPendingDelete(false);
+		}
+	}
+	return (
+		<>
+			<Shell app={fas} appName="Cue Scroll" nav={NAV} onNavigate={navigate}>
+				<div className="cue-page">
+					{url.pathname === "/help" ? (
+						<>
+							<PageHeader
+								title="Make room for your words"
+								description="A quiet teleprompter for your next take."
+							/>
+							<Card>
+								<ol className="cue-help">
+									<li>Add your script and give it a title.</li>
+									<li>
+										Open it, choose a comfortable size and speed, then press
+										Play.
+									</li>
+									<li>
+										Use mirror text with a teleprompter reflector. Space pauses
+										playback; touching the text pauses it too.
+									</li>
+								</ol>
+								<p>
+									Scripts stay in this browser on this device. Sign-in is
+									optional and does not sync scripts. Keep a separate copy of
+									text you need elsewhere.
+								</p>
+								<p>
+									After the first successful load, saved scripts and the reader
+									work offline. Installation is available from your profile when
+									this browser supports it.
+								</p>
+							</Card>
+						</>
+					) : reading ? (
+						<Reader
+							key={reading.id}
+							script={reading}
+							session={
+								readingSessions.current[reading.id] ??
+								(readingSessions.current[reading.id] = {})
+							}
+							onExit={() => navigate("/")}
+							onBusy={onBusy}
+						/>
+					) : (
+						<>
+							<PageHeader
+								title="Your next take starts here"
+								description="Write it once. Read it at your pace."
+								actions={
+									<button
+										className="cue-primary"
+										type="button"
+										disabled={loading || !!error}
+										onClick={() =>
+											setEditor({
+												id: crypto.randomUUID(),
+												title: "",
+												body: "",
+												revision: 0,
+											})
+										}
+									>
+										New script
+									</button>
+								}
+							/>
+							<div className="cue-summary">
+								<span>
+									{scripts.length} {scripts.length === 1 ? "script" : "scripts"}{" "}
+									· Saved on this device
+								</span>
+								<button
+									type="button"
+									disabled={loading}
+									onClick={() => void refresh()}
+								>
+									Refresh library
+								</button>
+							</div>
+							{loading ? (
+								<p role="status">Opening your scripts…</p>
+							) : error ? (
+								<p role="alert" className="cue-error">
+									{error}
+								</p>
+							) : scripts.length === 0 ? (
+								<Card>
+									<div className="cue-empty">
+										<span aria-hidden="true" className="cue-mark">
+											Aa
+										</span>
+										<h2>A clear cue for every take</h2>
+										<p>Add a speech, video intro, or practice script.</p>
+										<button
+											className="cue-primary"
+											type="button"
+											onClick={() =>
+												setEditor({
+													id: crypto.randomUUID(),
+													title: "",
+													body: "",
+													revision: 0,
+												})
+											}
+										>
+											Create your first script
+										</button>
+									</div>
+								</Card>
+							) : (
+								<div className="cue-library">
+									{scripts.map((script) => (
+										<Card key={script.id}>
+											<article className="cue-script">
+												<p className="cue-kicker">
+													{wordCount(script.body)} words
+												</p>
+												<h2>{script.title}</h2>
+												<p className="cue-preview">
+													{script.body.slice(0, 170)}
+													{script.body.length > 170 ? "…" : ""}
+												</p>
+												<div className="cue-actions">
+													<button
+														className="cue-primary"
+														type="button"
+														onClick={() =>
+															navigate(
+																`/read?id=${encodeURIComponent(script.id)}`,
+															)
+														}
+													>
+														Open script
+													</button>
+													<button
+														type="button"
+														aria-label={`Edit ${script.title}`}
+														onClick={() => setEditor(script)}
+													>
+														Edit
+													</button>
+													<button
+														type="button"
+														aria-label={`Delete ${script.title}`}
+														onClick={() => {
+															setDeleteError("");
+															setDeleting(script);
+														}}
+													>
+														Delete
+													</button>
+												</div>
+											</article>
+										</Card>
+									))}
+								</div>
+							)}
+						</>
+					)}
+				</div>
+			</Shell>
+			{editor && (
+				<Editor
+					key={editor.id}
+					script={editor}
+					onSave={async (draft) => {
+						setScripts(await saveScript(draft));
+					}}
+					onClose={() => setEditor(null)}
+				/>
+			)}
+			{deleting && (
+				<Modal
+					open
+					title="Delete script?"
+					onClose={() => {
+						if (!deletion.current) setDeleting(null);
+					}}
+				>
+					<p>Delete “{deleting.title}” from this device?</p>
+					{deleteError && <p role="alert">{deleteError}</p>}
+					{pendingDelete && <p role="status">Deleting…</p>}
+					<div className="cue-actions">
+						<button
+							disabled={pendingDelete}
+							type="button"
+							onClick={() => setDeleting(null)}
+						>
+							Cancel
+						</button>
+						<button
+							disabled={pendingDelete}
+							type="button"
+							onClick={() => void remove()}
+						>
+							Delete script
+						</button>
+					</div>
+				</Modal>
+			)}
+		</>
+	);
 }

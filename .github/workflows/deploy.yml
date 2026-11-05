@@ -49,12 +49,19 @@ jobs:
         run: npx --yes @freeappstore/cli@0.4.67 build-target --app-id "${GITHUB_REPOSITORY##*/}" --github-output
       - name: Typecheck (when configured)
         run: pnpm run --if-present typecheck
+      - name: Unit tests
+        run: pnpm test
       - name: Build
         env:
           BUILD_COMMAND: ${{ steps.target.outputs.build-command }}
         run: bash -e -c "$BUILD_COMMAND"
       - name: Verify build output
         run: npx --yes @freeappstore/cli@0.4.67 build-target --artifact --app-id "${GITHUB_REPOSITORY##*/}"
+      - name: Install browser engines
+        timeout-minutes: 10
+        run: pnpm exec playwright install --with-deps chromium webkit
+      - name: Exercise real app flows
+        run: pnpm test:e2e
       - name: Retain verified dependency lock
         run: |
           set -euo pipefail

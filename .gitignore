@@ -2,3 +2,15 @@ node_modules
 dist
 .DS_Store
 *.local
+
+*.tsbuildinfo
+/test-results/
+/playwright-report/
+
+# Generated from app-owned icon.svg by dev/build. Remove entries for prebuilt icons.
+/web/public/favicon.ico
+/web/public/apple-touch-icon-180x180.png
+/web/public/pwa-64x64.png
+/web/public/pwa-192x192.png
+/web/public/pwa-512x512.png
+/web/public/maskable-icon-512x512.png

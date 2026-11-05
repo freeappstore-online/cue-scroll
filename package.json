@@ -16,9 +16,13 @@
     "build": "pnpm --filter @cue-scroll/web build",
     "preview": "pnpm --filter @cue-scroll/web preview",
     "typecheck": "pnpm --filter @cue-scroll/web exec tsc -b",
-    "test": "pnpm --filter @cue-scroll/web test"
+    "test": "pnpm --filter @cue-scroll/web test",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
-    "@freeappstore/sdk": "^0.16.18"
+    "@freeappstore/sdk": "^0.16.38"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.64.0"
   }
 }

@@ -1,6 +1,6 @@
 {
-  "name": "cue-scroll",
-  "short_name": "cue-scroll",
+  "name": "Cue Scroll",
+  "short_name": "Cue Scroll",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
