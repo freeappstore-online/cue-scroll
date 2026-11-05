@@ -1,0 +1,24 @@
+{
+  "name": "cue-scroll",
+  "private": true,
+  "packageManager": "pnpm@10.30.3",
+  "engines": {
+    "node": ">=22"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild",
+      "sharp"
+    ]
+  },
+  "scripts": {
+    "dev": "pnpm --filter @cue-scroll/web dev",
+    "build": "pnpm --filter @cue-scroll/web build",
+    "preview": "pnpm --filter @cue-scroll/web preview",
+    "typecheck": "pnpm --filter @cue-scroll/web exec tsc -b",
+    "test": "pnpm --filter @cue-scroll/web test"
+  },
+  "dependencies": {
+    "@freeappstore/sdk": "^0.16.18"
+  }
+}

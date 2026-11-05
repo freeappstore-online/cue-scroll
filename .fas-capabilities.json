@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "capabilities": {
+    "pwa": {
+      "version": "1.0.0",
+      "files": {
+        "web/src/fas-capabilities/pwa.ts": "d5e4422298900822543bb8538e1e7a8371d7cc2de6ba198ec93343517b21a792",
+        "web/fas-pwa-config.ts": "4ef48e13f7ac7403d29ad08e5edc1868f1a8c2e4af083750eae0a07a705ef493",
+        "fas-capabilities/pwa.md": "cd5ae3917808f6efec5813279a4a44dfd32d4daaf8cd81ab44ae8e51a3f00c51"
+      },
+      "metadata": {
+        "install": "manifest",
+        "updates": "prompt-with-busy-guards",
+        "offline": "shell-only"
+      }
+    },
+    "persistence": {
+      "version": "1.0.1",
+      "files": {
+        "fas-capabilities/persistence.ts": "e731b01c47bc4cf2bfab8fef037671513f1b6412b875eb7e757685916a13299b",
+        "fas-capabilities/persistence.md": "2679678ca4dc8c15684cf70884e1e1a5b2784c42e32ba639f23fc2c80417603d"
+      },
+      "metadata": {
+        "data": "device-local",
+        "account": "private-per-account:fas.kv",
+        "shared": "public-read:fas.collections",
+        "roomRestricted": "backend-http:data-rooms"
+      }
+    }
+  }
+}
