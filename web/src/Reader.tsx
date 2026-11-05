@@ -7,6 +7,7 @@ export type ReadingSession = {
 	size?: number;
 	mirror?: boolean;
 	awake?: boolean;
+	settingsOpen?: boolean;
 };
 export function Reader({
 	script,
@@ -26,6 +27,9 @@ export function Reader({
 	const [size, setSize] = useState(session.size ?? 2);
 	const [mirror, setMirror] = useState(session.mirror ?? false);
 	const [awake, setAwake] = useState(session.awake ?? true);
+	const [settingsOpen, setSettingsOpen] = useState(
+		session.settingsOpen ?? false,
+	);
 	const [notice, setNotice] = useState("");
 	useLayoutEffect(() => {
 		const element = area.current;
@@ -36,8 +40,8 @@ export function Reader({
 		};
 	}, [session]);
 	useEffect(() => {
-		Object.assign(session, { speed, size, mirror, awake });
-	}, [session, speed, size, mirror, awake]);
+		Object.assign(session, { speed, size, mirror, awake, settingsOpen });
+	}, [session, speed, size, mirror, awake, settingsOpen]);
 	useEffect(() => {
 		onBusy(playing);
 		return () => onBusy(false);
@@ -50,7 +54,9 @@ export function Reader({
 			if (
 				event.code !== "Space" ||
 				event.repeat ||
-				(event.target as HTMLElement)?.closest("input,textarea,select,button,a")
+				(event.target as HTMLElement)?.closest?.(
+					"input,textarea,select,button,a,summary,[contenteditable=true]",
+				)
 			)
 				return;
 			event.preventDefault();
@@ -60,6 +66,7 @@ export function Reader({
 					area.current.scrollHeight - area.current.clientHeight - 1
 			)
 				area.current.scrollTop = 0;
+			setSettingsOpen(false);
 			setPlaying((value) => !value);
 			setFinished(false);
 		};
@@ -139,6 +146,7 @@ export function Reader({
 						onClick={() => {
 							if (finished) restart();
 							setFinished(false);
+							setSettingsOpen(false);
 							setPlaying((value) => !value);
 						}}
 					>
@@ -151,46 +159,56 @@ export function Reader({
 						{playing ? "Reading" : finished ? "End of script" : "Paused"}
 					</span>
 				</div>
-				<div className="cue-controls">
-					<label>
-						Scroll speed <output>{speed} px/s</output>
-						<input
-							type="range"
-							min="10"
-							max="120"
-							step="5"
-							value={speed}
-							onChange={(event) => setSpeed(Number(event.target.value))}
-						/>
-					</label>
-					<label>
-						Reading text size <output>{Math.round(size * 100)}%</output>
-						<input
-							type="range"
-							min="1.25"
-							max="3.5"
-							step="0.25"
-							value={size}
-							onChange={(event) => setSize(Number(event.target.value))}
-						/>
-					</label>
-					<label className="cue-check">
-						<input
-							type="checkbox"
-							checked={mirror}
-							onChange={(event) => setMirror(event.target.checked)}
-						/>
-						Mirror text
-					</label>
-					<label className="cue-check">
-						<input
-							type="checkbox"
-							checked={awake}
-							onChange={(event) => setAwake(event.target.checked)}
-						/>
-						Keep screen awake
-					</label>
-				</div>
+				<details
+					className="cue-settings"
+					open={settingsOpen}
+					onToggle={(event) => {
+						setSettingsOpen(event.currentTarget.open);
+						if (event.currentTarget.open) setPlaying(false);
+					}}
+				>
+					<summary>Reading settings</summary>
+					<div className="cue-controls">
+						<label>
+							Scroll speed <output>{speed} px/s</output>
+							<input
+								type="range"
+								min="10"
+								max="120"
+								step="5"
+								value={speed}
+								onChange={(event) => setSpeed(Number(event.target.value))}
+							/>
+						</label>
+						<label>
+							Reading text size <output>{Math.round(size * 100)}%</output>
+							<input
+								type="range"
+								min="1.25"
+								max="3.5"
+								step="0.25"
+								value={size}
+								onChange={(event) => setSize(Number(event.target.value))}
+							/>
+						</label>
+						<label className="cue-check">
+							<input
+								type="checkbox"
+								checked={mirror}
+								onChange={(event) => setMirror(event.target.checked)}
+							/>
+							Mirror text
+						</label>
+						<label className="cue-check">
+							<input
+								type="checkbox"
+								checked={awake}
+								onChange={(event) => setAwake(event.target.checked)}
+							/>
+							Keep screen awake
+						</label>
+					</div>
+				</details>
 				<div
 					ref={area}
 					className="cue-scroll"

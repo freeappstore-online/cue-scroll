@@ -40,11 +40,19 @@ test("write, recover a failed save, reload, read and return from profile", async
 	await page.reload();
 	await page.getByRole("button", { name: "Open script", exact: true }).click();
 	const area = page.getByLabel("Script reading area", { exact: true });
+	await expect(area).toBeInViewport({ ratio: 0.5 });
 	await page.getByRole("button", { name: "Play", exact: true }).click();
 	await expect
 		.poll(() => area.evaluate((el) => el.scrollTop))
 		.toBeGreaterThan(10);
 	await page.getByRole("button", { name: "Pause", exact: true }).click();
+	const settings = page.locator("summary", { hasText: "Reading settings" });
+	await settings.focus();
+	await page.keyboard.press("Space");
+	await expect(page.getByLabel("Mirror text", { exact: true })).toBeVisible();
+	await expect(
+		page.getByRole("button", { name: "Play", exact: true }),
+	).toBeVisible();
 	await page.getByLabel("Mirror text", { exact: true }).check();
 	await expect(page.locator(".cue-reading-text")).toHaveCSS(
 		"transform",
