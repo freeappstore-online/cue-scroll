@@ -13,11 +13,13 @@ export function Reader({
 	script,
 	session,
 	onExit,
+	exitLabel = "Library",
 	onBusy,
 }: {
 	script: Script;
 	session: ReadingSession;
 	onExit(): void;
+	exitLabel?: string;
 	onBusy(value: boolean): void;
 }) {
 	const area = useRef<HTMLDivElement>(null);
@@ -134,7 +136,7 @@ export function Reader({
 				description={`${wordCount(script.body)} words · Settle in, then press play.`}
 				actions={
 					<button type="button" onClick={onExit}>
-						Library
+						{exitLabel}
 					</button>
 				}
 			/>

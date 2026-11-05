@@ -10,11 +10,12 @@ import {
 import { Editor } from "./Editor";
 import { Reader, type ReadingSession } from "./Reader";
 import { pwa } from "./pwa";
+import { SAMPLE_SCRIPTS } from "./samples";
 import { type Script, loadLibrary, saveScript, wordCount } from "./scripts";
 export const fas = initApp({ appId: "cue-scroll" });
 const NAV: NavItem[] = [
-	{ label: "Scripts", href: "/", title: "Cue Scroll" },
-	{ label: "How to use", href: "/help", title: "How to use — Cue Scroll" },
+	{ label: "Scripts", href: "/", title: "Cue" },
+	{ label: "How to use", href: "/help", title: "How to use — Cue" },
 ];
 const location = () => window.location.pathname + window.location.search;
 export default function App() {
@@ -69,10 +70,17 @@ export default function App() {
 		setPath(location());
 	};
 	const url = new URL(path, window.location.origin);
-	const reading =
+	const sample =
 		url.pathname === "/read"
-			? scripts.find((script) => script.id === url.searchParams.get("id"))
+			? SAMPLE_SCRIPTS.find(
+					(script) => script.id === url.searchParams.get("sample"),
+				)
 			: undefined;
+	const reading =
+		sample ??
+		(url.pathname === "/read"
+			? scripts.find((script) => script.id === url.searchParams.get("id"))
+			: undefined);
 	async function remove() {
 		if (!deleting || deletion.current) return;
 		deletion.current = true;
@@ -90,7 +98,7 @@ export default function App() {
 	}
 	return (
 		<>
-			<Shell app={fas} appName="Cue Scroll" nav={NAV} onNavigate={navigate}>
+			<Shell app={fas} appName="Cue" nav={NAV} onNavigate={navigate}>
 				<div className="cue-page">
 					{url.pathname === "/help" ? (
 						<>
@@ -121,6 +129,34 @@ export default function App() {
 									this browser supports it.
 								</p>
 							</Card>
+							<section aria-labelledby="sample-heading">
+								<h2 id="sample-heading">Try a sample</h2>
+								<p>
+									Open a practice script, then press Play. No saving needed.
+								</p>
+								<div className="cue-library">
+									{SAMPLE_SCRIPTS.map((script) => (
+										<Card key={script.id}>
+											<article className="cue-script">
+												<h3>{script.title}</h3>
+												<p className="cue-sample-text">{script.body}</p>
+												<button
+													type="button"
+													className="cue-primary"
+													aria-label={`Start ${script.title}`}
+													onClick={() =>
+														navigate(
+															`/read?sample=${encodeURIComponent(script.id)}`,
+														)
+													}
+												>
+													Start reading
+												</button>
+											</article>
+										</Card>
+									))}
+								</div>
+							</section>
 						</>
 					) : reading ? (
 						<Reader
@@ -130,7 +166,8 @@ export default function App() {
 								readingSessions.current[reading.id] ??
 								(readingSessions.current[reading.id] = {})
 							}
-							onExit={() => navigate("/")}
+							exitLabel={sample ? "How to use" : "Library"}
+							onExit={() => navigate(sample ? "/help" : "/")}
 							onBusy={onBusy}
 						/>
 					) : (

@@ -1,4 +1,4 @@
-# Cue Scroll
+# Cue
 
 A free teleprompter for speeches, videos and practice. Save scripts on your device,
 set a comfortable scrolling speed and text size, and use mirror mode with a reflector.

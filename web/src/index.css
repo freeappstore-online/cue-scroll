@@ -378,3 +378,9 @@
 		}
 	}
 }
+
+@layer components {
+	.cue-sample-text {
+		white-space: pre-line;
+	}
+}

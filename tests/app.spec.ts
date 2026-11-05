@@ -171,3 +171,51 @@ test("offline scripts, real identity assets and stale-tab conflict handling", as
 		.poll(() => page.locator(".cue-scroll").evaluate((el) => el.scrollTop))
 		.toBeGreaterThan(5);
 });
+
+test("practice samples open from help without changing the saved library", async ({
+	page,
+}) => {
+	await page.goto("/help");
+	await expect(
+		page.getByRole("heading", { name: "Try a sample" }),
+	).toBeVisible();
+	await expect(page.getByRole("main")).toContainText(
+		"Take a breath. Let your shoulders relax",
+	);
+	for (const title of ["Camera warm-up", "A short welcome"]) {
+		await page
+			.getByRole("button", { name: `Start ${title}`, exact: true })
+			.click();
+		await expect(
+			page.getByRole("heading", { name: title, exact: true }),
+		).toBeVisible();
+		await page.getByRole("button", { name: "Play", exact: true }).click();
+		await expect
+			.poll(() =>
+				page
+					.getByRole("region", { name: "Script reading area" })
+					.evaluate((el) => el.scrollTop),
+			)
+			.toBeGreaterThan(5);
+		await page.getByRole("button", { name: "Pause", exact: true }).click();
+		await page.reload();
+		await expect(
+			page.getByRole("heading", { name: title, exact: true }),
+		).toBeVisible();
+		await expect(
+			page.getByRole("button", { name: "Play", exact: true }),
+		).toBeVisible();
+		await page.getByRole("button", { name: "How to use", exact: true }).click();
+		await expect(
+			page.getByRole("heading", { name: "Try a sample" }),
+		).toBeVisible();
+	}
+	await page.goto("/");
+	await expect(page.getByRole("main")).toContainText(
+		"0 scripts · Saved on this device",
+	);
+	const manifest = await (await page.request.get("/manifest.json")).json();
+	expect(manifest.name).toBe("Cue");
+	expect(manifest.short_name).toBe("Cue");
+	await expect(page).toHaveTitle("Cue");
+});
